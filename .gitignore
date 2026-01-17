@@ -1,0 +1,43 @@
+# Build directories
+build/
+Debug/
+Release/
+
+# Object files
+*.o
+*.obj
+*.elf
+*.hex
+*.bin
+*.map
+*.lst
+*.su
+*.d
+
+# IDEs
+.settings/
+.cproject
+.project
+.metadata/
+*.launch
+
+# Debug files
+*.out
+*.stackdump
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Generated files
+*.bak
+*~
+
+# STM32CubeIDE generated
+STM32CubeIDE/.settings/
+STM32CubeIDE/Debug/
+STM32CubeIDE/Release/
+
+# Keep linker scripts and startup files
+!*.ld
+!startup_*.s
