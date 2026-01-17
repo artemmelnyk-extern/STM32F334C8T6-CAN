@@ -1,18 +1,20 @@
-# Build directories
-build/
+# Build directories - allow validated binaries
+# build/
 Debug/
 Release/
 
 # Object files
 *.o
 *.obj
-*.elf
-*.hex
-*.bin
 *.map
 *.lst
 *.su
 *.d
+
+# Keep validated binaries for traceability
+# *.elf
+# *.hex
+# *.bin
 
 # IDEs
 .settings/
