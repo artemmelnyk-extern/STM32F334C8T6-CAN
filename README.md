@@ -1,7 +1,7 @@
 # STM32 CAN Bus Communication Project
 
 ## Overview
-This project implements CAN (Controller Area Network) bus communication on an STM32F334C8T6 microcontroller. The firmware transmits a test pattern (0xDEADBEEF) over the CAN bus at 1 Hz while toggling a GPIO pin for visual feedback. It also reads the internal temperature sensor and transmits temperature data via CAN every second.
+This project implements CAN (Controller Area Network) bus communication on an STM32F334C8T6 microcontroller. The firmware transmits a combined message containing a test pattern (0xDEADBEEF) and internal temperature sensor data over the CAN bus at 1 Hz while toggling a GPIO pin for visual feedback.
 
 ## Hardware Specifications
 - **Microcontroller**: STM32F334C8T6
@@ -15,9 +15,7 @@ This project implements CAN (Controller Area Network) bus communication on an ST
 ## CAN Configuration
 - **Baud Rate**: 250 kbps (configurable via prescaler and bit timing)
 - **Mode**: Normal mode
-- **Message IDs**: 
-  - 0x0A1 (Standard 11-bit identifier) - Test pattern
-  - 0x0A2 (Standard 11-bit identifier) - Temperature data
+- **Message ID**: 0x0A1 (Standard 11-bit identifier) - Combined data
 - **Data Length**: 8 bytes
 - **Filter**: Accept all messages (IDMASK mode with all zeros)
 - **FIFO**: RX FIFO0
@@ -72,20 +70,19 @@ uwb-stm-can/
 ## Functionality
 The main application loop performs the following operations:
 1. **LED Toggle**: Toggles PA2 every 100ms (10 Hz)
-2. **CAN Transmission**: Sends 8-byte message containing `{0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x00, 0x00, 0x00}` on ID 0x0A1 every 100ms
-3. **Temperature Reading**: Reads internal temperature sensor every 1 second
-4. **Temperature Transmission**: Sends temperature data on CAN ID 0x0A2 every 1 second
+2. **Temperature Reading**: Reads internal temperature sensor every 1 second
+3. **CAN Transmission**: Sends 8-byte message combining test pattern and temperature data on ID 0x0A1 every 1 second
 
-### Temperature CAN Message Format (ID 0x0A2)
+### CAN Message Format (ID 0x0A1)
 ```
-Byte 0: 0x54 ('T') - Message identifier
-Byte 1: Temperature high byte (signed, °C × 10)
-Byte 2: Temperature low byte (signed, °C × 10)
-Byte 3: Raw ADC value high byte
-Byte 4: Raw ADC value low byte
-Byte 5-7: Reserved (0x00)
+Byte 0-3: 0xDE AD BE EF - Fixed test pattern
+Byte 4: Temperature high byte (signed, °C × 10)
+Byte 5: Temperature low byte (signed, °C × 10)
+Byte 6: Raw ADC value high byte
+Byte 7: Raw ADC value low byte
 
-Example: 0x54 00 FA 06 2C 00 00 00
+Example: DE AD BE EF 00 FA 06 2C
+  → Pattern: 0xDEADBEEF
   → Temperature: 0x00FA = 250 = 25.0°C
   → Raw ADC: 0x062C = 1580
 ```
@@ -126,9 +123,8 @@ You can observe the transmitted messages using:
 Example using SocketCAN on Linux:
 ```bash
 candump can0
-# Expected output:
-# can0  0A1  [8]  DE AD BE EF 00 00 00 00  (test pattern)
-# can0  0A2  [8]  54 00 FA 06 2C 00 00 00  (temperature: 25.0°C)
+# Expected output (1 Hz):
+# can0  0A1  [8]  DE AD BE EF 00 FA 06 2C  (pattern + temp: 25.0°C)
 ```
 
 ## Troubleshooting

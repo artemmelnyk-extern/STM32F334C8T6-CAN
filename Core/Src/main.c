@@ -118,10 +118,6 @@ int main(void)
    (void) HAL_Delay(100U);
    (void) HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_2);
 
-   // Send DEADBEEF pattern over CAN at 1 Hz
-   uint8_t canData[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x00, 0x00, 0x00};
-   HAL_CAN_AddTxMessage(&hcan, &txHeader, canData, &canMailbox);
-
    // Read and send temperature every 1 second (10 x 100ms)
    tempCounter++;
    if (tempCounter >= 10)
@@ -129,23 +125,22 @@ int main(void)
      tempCounter = 0;
      
      // Read temperature sensor
-     float tempCelsius = Temperature_GetCelsius();
      int16_t tempInt = Temperature_GetCelsiusInt(); // Temperature * 10
      uint16_t tempRaw = Temperature_ReadADC();
      
-     // Prepare CAN message with temperature data
-     uint8_t tempData[8];
-     tempData[0] = 0x54; // 'T' - Temperature message identifier
-     tempData[1] = (uint8_t)(tempInt >> 8);   // Temperature high byte (signed)
-     tempData[2] = (uint8_t)(tempInt & 0xFF); // Temperature low byte
-     tempData[3] = (uint8_t)(tempRaw >> 8);   // Raw ADC high byte
-     tempData[4] = (uint8_t)(tempRaw & 0xFF); // Raw ADC low byte
-     tempData[5] = 0x00; // Reserved
-     tempData[6] = 0x00; // Reserved
-     tempData[7] = 0x00; // Reserved
+     // Combine DEADBEEF pattern with temperature data in single message
+     uint8_t canData[8];
+     canData[0] = 0xDE;                           // DEADBEEF pattern
+     canData[1] = 0xAD;
+     canData[2] = 0xBE;
+     canData[3] = 0xEF;
+     canData[4] = (uint8_t)(tempInt >> 8);        // Temperature high byte (signed)
+     canData[5] = (uint8_t)(tempInt & 0xFF);      // Temperature low byte
+     canData[6] = (uint8_t)(tempRaw >> 8);        // Raw ADC high byte
+     canData[7] = (uint8_t)(tempRaw & 0xFF);      // Raw ADC low byte
      
-     // Send temperature via CAN
-     HAL_CAN_AddTxMessage(&hcan, &txHeaderTemp, tempData, &canMailbox);
+     // Send combined message via CAN
+     HAL_CAN_AddTxMessage(&hcan, &txHeader, canData, &canMailbox);
    }
 
     /* USER CODE END WHILE */
