@@ -24,6 +24,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include "adc.h"
+#include "temperature.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,8 +48,10 @@
 /* USER CODE BEGIN PV */
 CAN_RxHeaderTypeDef rxHeader; // CAN Bus Receive Header
 CAN_TxHeaderTypeDef txHeader; // CAN Bus Transmit Header
+CAN_TxHeaderTypeDef txHeaderTemp; // CAN Bus Transmit Header for temperature
 uint32_t canMailbox; // CAN Bus Mail box variable
 CAN_FilterTypeDef canfil; // CAN Bus Filter
+uint32_t tempCounter = 0; // Counter for temperature sampling (every 10 cycles = 1Hz)
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -91,33 +95,58 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_CAN_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   HAL_CAN_ConfigFilter(&hcan, &canfil); // Initialize CAN Filter
   HAL_CAN_Start(&hcan);//
+  
+  /* Setup temperature CAN message header */
+  txHeaderTemp.DLC = 8;
+  txHeaderTemp.IDE = CAN_ID_STD;
+  txHeaderTemp.RTR = CAN_RTR_DATA;
+  txHeaderTemp.StdId = 0x0A2; // Different ID for temperature messages
+  txHeaderTemp.TransmitGlobalTime = DISABLE;
+  
+  /* Calibrate ADC */
+  HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//   (void) HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13);
    (void) HAL_Delay(100U);
-
    (void) HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_2);
 
    // Send DEADBEEF pattern over CAN at 1 Hz
    uint8_t canData[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x00, 0x00, 0x00};
-   //HAL_StatusTypeDef status =
    HAL_CAN_AddTxMessage(&hcan, &txHeader, canData, &canMailbox);
-   //HAL_StatusTypeDef HAL_CAN_AddTxMessage(CAN_HandleTypeDef *hcan, const CAN_TxHeaderTypeDef *pHeader,
-   // const uint8_t aData[], uint32_t *pTxMailbox)
 
-
-   uint32_t status = HAL_CAN_IsTxMessagePending(&hcan, canMailbox);
-
-   if (status == HAL_OK ){
-	   printf("OK");}
-
+   // Read and send temperature every 1 second (10 x 100ms)
+   tempCounter++;
+   if (tempCounter >= 10)
+   {
+     tempCounter = 0;
+     
+     // Read temperature sensor
+     float tempCelsius = Temperature_GetCelsius();
+     int16_t tempInt = Temperature_GetCelsiusInt(); // Temperature * 10
+     uint16_t tempRaw = Temperature_ReadADC();
+     
+     // Prepare CAN message with temperature data
+     uint8_t tempData[8];
+     tempData[0] = 0x54; // 'T' - Temperature message identifier
+     tempData[1] = (uint8_t)(tempInt >> 8);   // Temperature high byte (signed)
+     tempData[2] = (uint8_t)(tempInt & 0xFF); // Temperature low byte
+     tempData[3] = (uint8_t)(tempRaw >> 8);   // Raw ADC high byte
+     tempData[4] = (uint8_t)(tempRaw & 0xFF); // Raw ADC low byte
+     tempData[5] = 0x00; // Reserved
+     tempData[6] = 0x00; // Reserved
+     tempData[7] = 0x00; // Reserved
+     
+     // Send temperature via CAN
+     HAL_CAN_AddTxMessage(&hcan, &txHeaderTemp, tempData, &canMailbox);
+   }
 
     /* USER CODE END WHILE */
 

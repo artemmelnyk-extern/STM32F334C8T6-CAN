@@ -31,10 +31,14 @@ C_SOURCES =  \
 Core/Src/main.c \
 Core/Src/can.c \
 Core/Src/gpio.c \
+Core/Src/adc.c \
+Core/Src/temperature.c \
 Core/Src/stm32f3xx_it.c \
 Core/Src/stm32f3xx_hal_msp.c \
 Core/Src/system_stm32f3xx.c \
 Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_can.c \
+Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_adc.c \
+Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_adc_ex.c \
 Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal.c \
 Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_rcc.c \
 Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_rcc_ex.c \

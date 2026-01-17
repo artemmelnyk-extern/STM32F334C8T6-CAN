@@ -1,7 +1,7 @@
 # STM32 CAN Bus Communication Project
 
 ## Overview
-This project implements CAN (Controller Area Network) bus communication on an STM32F334C8T6 microcontroller. The firmware transmits a test pattern (0xDEADBEEF) over the CAN bus at 1 Hz while toggling a GPIO pin for visual feedback.
+This project implements CAN (Controller Area Network) bus communication on an STM32F334C8T6 microcontroller. The firmware transmits a test pattern (0xDEADBEEF) over the CAN bus at 1 Hz while toggling a GPIO pin for visual feedback. It also reads the internal temperature sensor and transmits temperature data via CAN every second.
 
 ## Hardware Specifications
 - **Microcontroller**: STM32F334C8T6
@@ -9,12 +9,15 @@ This project implements CAN (Controller Area Network) bus communication on an ST
   - RX: PA11
   - TX: PA12
 - **LED Output**: PA2 (toggles at 10 Hz)
+- **Temperature Sensor**: Internal ADC1_IN16 (factory calibrated)
 - **Clock**: External HSE with PLL (32 MHz system clock)
 
 ## CAN Configuration
 - **Baud Rate**: 250 kbps (configurable via prescaler and bit timing)
 - **Mode**: Normal mode
-- **Message ID**: 0x0A1 (Standard 11-bit identifier)
+- **Message IDs**: 
+  - 0x0A1 (Standard 11-bit identifier) - Test pattern
+  - 0x0A2 (Standard 11-bit identifier) - Temperature data
 - **Data Length**: 8 bytes
 - **Filter**: Accept all messages (IDMASK mode with all zeros)
 - **FIFO**: RX FIFO0
@@ -25,6 +28,14 @@ This project implements CAN (Controller Area Network) bus communication on an ST
 - Time Segment 1: 3 TQ
 - Time Segment 2: 4 TQ
 
+### ADC Configuration
+- **Resolution**: 12-bit (0-4095)
+- **Channel**: ADC1_IN16 (internal temperature sensor)
+- **Sampling Time**: 601.5 cycles (for accuracy)
+- **Calibration**: Factory calibrated at 30°C and 110°C
+- **Temperature Range**: -40°C to +125°C (typical operation)
+- **Accuracy**: ±2°C (with factory calibration)
+
 ## Project Structure
 ```
 uwb-stm-can/
@@ -32,11 +43,15 @@ uwb-stm-can/
 │   ├── Inc/                    # Header files
 │   │   ├── main.h
 │   │   ├── can.h
-│   │   └── gpio.h
+│   │   ├── gpio.h
+│   │   ├── adc.h
+│   │   └── temperature.h
 │   └── Src/                    # Source files
 │       ├── main.c              # Main application logic
 │       ├── can.c               # CAN peripheral configuration
 │       ├── gpio.c              # GPIO configuration
+│       ├── adc.c               # ADC configuration
+│       ├── temperature.c       # Temperature sensor driver
 │       └── system_stm32f3xx.c  # System initialization
 ├── Drivers/                    # STM32 HAL drivers
 │   ├── CMSIS/                  # ARM CMSIS libraries
@@ -51,12 +66,29 @@ uwb-stm-can/
 - ✅ GPIO toggle for visual status indication
 - ✅ Configurable CAN filter
 - ✅ Transmit mailbox status checking
+- ✅ Internal temperature sensor reading with factory calibration
+- ✅ Temperature data transmission via CAN (1 Hz)
 
 ## Functionality
 The main application loop performs the following operations:
 1. **LED Toggle**: Toggles PA2 every 100ms (10 Hz)
-2. **CAN Transmission**: Sends 8-byte message containing `{0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x00, 0x00, 0x00}`
-3. **Status Check**: Verifies if the CAN message is pending in the transmit mailbox
+2. **CAN Transmission**: Sends 8-byte message containing `{0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x00, 0x00, 0x00}` on ID 0x0A1 every 100ms
+3. **Temperature Reading**: Reads internal temperature sensor every 1 second
+4. **Temperature Transmission**: Sends temperature data on CAN ID 0x0A2 every 1 second
+
+### Temperature CAN Message Format (ID 0x0A2)
+```
+Byte 0: 0x54 ('T') - Message identifier
+Byte 1: Temperature high byte (signed, °C × 10)
+Byte 2: Temperature low byte (signed, °C × 10)
+Byte 3: Raw ADC value high byte
+Byte 4: Raw ADC value low byte
+Byte 5-7: Reserved (0x00)
+
+Example: 0x54 00 FA 06 2C 00 00 00
+  → Temperature: 0x00FA = 250 = 25.0°C
+  → Raw ADC: 0x062C = 1580
+```
 
 ## Building and Flashing
 This project is designed for STM32CubeIDE:
@@ -95,7 +127,8 @@ Example using SocketCAN on Linux:
 ```bash
 candump can0
 # Expected output:
-# can0  0A1  [8]  DE AD BE EF 00 00 00 00
+# can0  0A1  [8]  DE AD BE EF 00 00 00 00  (test pattern)
+# can0  0A2  [8]  54 00 FA 06 2C 00 00 00  (temperature: 25.0°C)
 ```
 
 ## Troubleshooting
