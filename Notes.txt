@@ -1,0 +1,29 @@
+# How to
+
+## Get where the CANUSB is connected
+
+use the terminal blocked command to monitor system events:
+
+```bash
+sudo dmesg -wL
+```
+Once the can device connected:
+
+```bash
+[81442.228943] can0: slcan on ttyUSB7.
+```
+
+## acticate slcand daemon
+
+```bash
+sudo slcand -o -c -f -s8 /dev/ttyUSB7 slcan0
+
+sudo ifconfig slcan0 up 
+```
+
+## Other
+
+https://claude.ai/share/5e5351fa-8180-4351-a754-cf6fe26d41a6
+https://pascal-walter.blogspot.com/2015/08/installing-lawicel-canusb-on-linux.html
+
+
