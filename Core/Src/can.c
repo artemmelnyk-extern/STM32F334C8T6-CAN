@@ -21,7 +21,7 @@
 #include "can.h"
 
 /* USER CODE BEGIN 0 */
-extern CAN_TxHeaderTypeDef txHeader; // CAN Bus Transmit Header
+extern CAN_TxHeaderTypeDef txHeaderA1; // CAN Bus Transmit Header for A1
 extern CAN_FilterTypeDef canfil; // CAN Bus Filter
 /* USER CODE END 0 */
 
@@ -46,12 +46,12 @@ void MX_CAN_Init(void)
   /* USER CODE END CAN_Init 0 */
 
   /* USER CODE BEGIN CAN_Init 1 */
-  txHeader.DLC = 8; // Number of bites to be transmitted max- 8
-  txHeader.IDE = CAN_ID_STD;
-  txHeader.RTR = CAN_RTR_DATA;
-  txHeader.StdId = 0x0A1;
-  txHeader.ExtId = 0x02;
-  txHeader.TransmitGlobalTime = DISABLE;
+  txHeaderA1.DLC = 8; // Number of bites to be transmitted max- 8
+  txHeaderA1.IDE = CAN_ID_STD;
+  txHeaderA1.RTR = CAN_RTR_DATA;
+  txHeaderA1.StdId = 0x0A1;
+  txHeaderA1.ExtId = 0x02;
+  txHeaderA1.TransmitGlobalTime = DISABLE;
 
   /* USER CODE END CAN_Init 1 */
   hcan.Instance = CAN;

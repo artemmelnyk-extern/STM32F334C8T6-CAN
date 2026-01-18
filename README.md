@@ -1,7 +1,11 @@
 # STM32 CAN Bus Communication Project
 
 ## Overview
-This project implements CAN (Controller Area Network) bus communication on an STM32F334C8T6 microcontroller. The firmware transmits a combined message containing a test pattern (0xDEADBEEF) and internal temperature sensor data over the CAN bus at 1 Hz while toggling a GPIO pin for visual feedback.
+This project implements CAN (Controller Area Network) bus communication on an STM32F334C8T6 microcontroller. The firmware transmits two separate CAN messages:
+- **A1 Message**: Test pattern (0xDEADBEEF) at 30 Hz
+- **T1 Message**: Temperature data in NMEA 2000 PGN 130312 format at 1 Hz
+
+A GPIO pin toggles for visual feedback at approximately 30 Hz.
 
 ## Hardware Specifications
 - **Microcontroller**: STM32F334C8T6
@@ -15,7 +19,9 @@ This project implements CAN (Controller Area Network) bus communication on an ST
 ## CAN Configuration
 - **Baud Rate**: 250 kbps (configurable via prescaler and bit timing)
 - **Mode**: Normal mode
-- **Message ID**: 0x0A1 (Standard 11-bit identifier) - Combined data
+- **Message IDs**: 
+  - **A1**: 0x0A1 (Standard 11-bit identifier) - Test pattern at 30 Hz
+  - **T1**: 0x19FD0800 (Extended 29-bit identifier) - NMEA 2000 Temperature at 1 Hz
 - **Data Length**: 8 bytes
 - **Filter**: Accept all messages (IDMASK mode with all zeros)
 - **FIFO**: RX FIFO0
@@ -69,22 +75,48 @@ uwb-stm-can/
 
 ## Functionality
 The main application loop performs the following operations:
-1. **LED Toggle**: Toggles PA2 every 100ms (10 Hz)
-2. **Temperature Reading**: Reads internal temperature sensor every 1 second
-3. **CAN Transmission**: Sends 8-byte message combining test pattern and temperature data on ID 0x0A1 every 1 second
+1. **LED Toggle**: Toggles PA2 every ~33ms (approximately 30 Hz)
+2. **A1 Message Transmission**: Sends DEADBEEF test pattern at 30 Hz
+3. **Temperature Reading**: Reads internal temperature sensor every 1 second
+4. **T1 Message Transmission**: Sends temperature data in NMEA 2000 format at 1 Hz
 
-### CAN Message Format (ID 0x0A1)
+### A1 Message Format (ID 0x0A1) - 30 Hz
 ```
-Byte 0-3: 0xDE AD BE EF - Fixed test pattern
-Byte 4: Temperature high byte (signed, °C × 10)
-Byte 5: Temperature low byte (signed, °C × 10)
-Byte 6: Raw ADC value high byte
-Byte 7: Raw ADC value low byte
+Standard 11-bit CAN ID: 0x0A1
+Data: DE AD BE EF 00 00 00 00
 
-Example: DE AD BE EF 00 FA 06 2C
-  → Pattern: 0xDEADBEEF
-  → Temperature: 0x00FA = 250 = 25.0°C
-  → Raw ADC: 0x062C = 1580
+Byte 0-3: 0xDE AD BE EF - Fixed test pattern
+Byte 4-7: 0x00 - Reserved
+
+Example:
+  slcan0  0A1  [8]  DE AD BE EF 00 00 00 00
+```
+
+### T1 Message Format (ID 0x19FD0800) - 1 Hz
+```
+Extended 29-bit CAN ID: 0x19FD0800
+  Priority: 6 (bits 26-28)
+  PGN: 130312 (0x1FD08) - NMEA 2000 Temperature
+  Source: 0 (bits 0-7)
+
+NMEA 2000 PGN 130312 Format:
+Byte 0: SID (Sequence ID) - Increments with each message
+Byte 1: Temperature Instance (0 = single sensor)
+Byte 2: Temperature Source (1 = Inside Temperature)
+Byte 3-4: Temperature in Kelvin × 100 (uint16, little-endian)
+Byte 5-7: Reserved (0xFF)
+
+Example: slcan0  19FD0800  [8]  28 00 01 65 74 FF FF FF
+  Byte 0: 0x28 (40) = SID
+  Byte 1: 0x00 = Instance 0
+  Byte 2: 0x01 = Inside Temperature
+  Bytes 3-4: 0x7465 = 29797 → 297.97K → 24.82°C
+  Bytes 5-7: 0xFF FF FF = Reserved
+
+Temperature Calculation:
+  Kelvin = (bytes[4] << 8) | bytes[3]
+  Celsius = (Kelvin / 100.0) - 273.15
+  Example: 29797 / 100 - 273.15 = 24.82°C
 ```
 
 ## Building and Flashing
@@ -122,9 +154,14 @@ You can observe the transmitted messages using:
 
 Example using SocketCAN on Linux:
 ```bash
-candump can0
-# Expected output (1 Hz):
-# can0  0A1  [8]  DE AD BE EF 00 FA 06 2C  (pattern + temp: 25.0°C)
+candump slcan0
+# Expected output:
+# A1 messages at 30 Hz:
+# slcan0  0A1  [8]  DE AD BE EF 00 00 00 00
+# slcan0  0A1  [8]  DE AD BE EF 00 00 00 00
+# ...
+# T1 message at 1 Hz:
+# slcan0  19FD0800  [8]  28 00 01 65 74 FF FF FF  (temp: 24.82°C)
 ```
 
 ## Troubleshooting
