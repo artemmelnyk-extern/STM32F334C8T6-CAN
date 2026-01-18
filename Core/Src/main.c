@@ -113,9 +113,9 @@ int main(void)
   txHeaderT1.DLC = 8;
   txHeaderT1.IDE = CAN_ID_EXT; // NMEA 2000 uses extended CAN ID
   txHeaderT1.RTR = CAN_RTR_DATA;
-  // NMEA 2000 format: Priority=6, PGN=130312 (0x1FD08), Source=0
+  // NMEA 2000 format: Priority=6, PGN=130312 (0x1FD08), Source=0x01
   // 29-bit ID = (Priority << 26) | (PGN << 8) | Source
-  txHeaderT1.ExtId = (6UL << 26) | (130312UL << 8) | 0; // 0x19FD0800
+  txHeaderT1.ExtId = (6UL << 26) | (130312UL << 8) | 0x01; // 0x19FD0801
   txHeaderT1.TransmitGlobalTime = DISABLE;
   
   /* Calibrate ADC */

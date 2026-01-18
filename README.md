@@ -21,7 +21,7 @@ A GPIO pin toggles for visual feedback at approximately 30 Hz.
 - **Mode**: Normal mode
 - **Message IDs**: 
   - **A1**: 0x0A1 (Standard 11-bit identifier) - Test pattern at 30 Hz
-  - **T1**: 0x19FD0800 (Extended 29-bit identifier) - NMEA 2000 Temperature at 1 Hz
+  - **T1**: 0x19FD0801 (Extended 29-bit identifier) - NMEA 2000 Temperature at 1 Hz
 - **Data Length**: 8 bytes
 - **Filter**: Accept all messages (IDMASK mode with all zeros)
 - **FIFO**: RX FIFO0
@@ -92,12 +92,16 @@ Example:
   slcan0  0A1  [8]  DE AD BE EF 00 00 00 00
 ```
 
-### T1 Message Format (ID 0x19FD0800) - 1 Hz
+### T1 Message Format (ID 0x19FD0801) - 1 Hz
 ```
-Extended 29-bit CAN ID: 0x19FD0800
-  Priority: 6 (bits 26-28)
+Extended 29-bit CAN ID: 0x19FD0801
+  Priority: 6 (bits 26-28) - Low priority for slow-changing data
+  Reserved: 0 (bit 25)
+  Data Page: 1 (bit 24)
+  PDU Format: 0xFD (bits 16-23)
+  PDU Specific: 0x08 (bits 8-15)
   PGN: 130312 (0x1FD08) - NMEA 2000 Temperature
-  Source: 0 (bits 0-7)
+  Source: 0x01 (bits 0-7) - Device address
 
 NMEA 2000 PGN 130312 Format:
 Byte 0: SID (Sequence ID) - Increments with each message
@@ -106,7 +110,7 @@ Byte 2: Temperature Source (1 = Inside Temperature)
 Byte 3-4: Temperature in Kelvin × 100 (uint16, little-endian)
 Byte 5-7: Reserved (0xFF)
 
-Example: slcan0  19FD0800  [8]  28 00 01 65 74 FF FF FF
+Example: slcan0  19FD0801  [8]  28 00 01 65 74 FF FF FF
   Byte 0: 0x28 (40) = SID
   Byte 1: 0x00 = Instance 0
   Byte 2: 0x01 = Inside Temperature
@@ -161,7 +165,7 @@ candump slcan0
 # slcan0  0A1  [8]  DE AD BE EF 00 00 00 00
 # ...
 # T1 message at 1 Hz:
-# slcan0  19FD0800  [8]  28 00 01 65 74 FF FF FF  (temp: 24.82°C)
+# slcan0  19FD0801  [8]  28 00 01 65 74 FF FF FF  (temp: 24.82°C)
 ```
 
 ## Troubleshooting
